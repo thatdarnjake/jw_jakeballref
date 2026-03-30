@@ -362,23 +362,36 @@
     }
     loadDefaultPlayer();
 
-    // ---- Page Tabs ----
+})();
+
+// ========================================
+// Page Tabs & Standings/Teams/Trending
+// (Outside IIFE so it always works)
+// ========================================
+(function () {
+    'use strict';
+
     let standingsLoaded = false;
     let teamsLoaded = false;
-    const $headerControls = document.getElementById('headerControls');
+    let currentTeamData = null;
+    let activeTeamTable = 'roster';
+    const headerControls = document.getElementById('headerControls');
 
-    document.querySelectorAll('.page-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    // ---- Tab switching ----
+    document.querySelectorAll('.page-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            document.querySelectorAll('.page-tab').forEach(function (t) { t.classList.remove('active'); });
+            document.querySelectorAll('.page').forEach(function (p) { p.classList.remove('active'); });
             tab.classList.add('active');
-            document.getElementById(tab.dataset.page + 'Page').classList.add('active');
+            var page = document.getElementById(tab.dataset.page + 'Page');
+            if (page) page.classList.add('active');
 
-            // Toggle header controls visibility
-            if ($headerControls) {
-                $headerControls.style.display = tab.dataset.page === 'players' ? '' : 'none';
+            // Show player controls only on players tab
+            if (headerControls) {
+                headerControls.style.display = tab.dataset.page === 'players' ? '' : 'none';
             }
 
+            // Lazy-load tab data
             if (tab.dataset.page === 'standings' && !standingsLoaded) {
                 loadStandings();
                 loadPlayoffs();
@@ -391,10 +404,11 @@
         });
     });
 
+    // ---- Standings ----
     async function loadStandings() {
         try {
-            const res = await fetch('/api/standings');
-            const data = await res.json();
+            var res = await fetch('/api/standings');
+            var data = await res.json();
             renderStandingsTable('eastStandings', data.east);
             renderStandingsTable('westStandings', data.west);
         } catch (e) {
@@ -404,40 +418,35 @@
     }
 
     function renderStandingsTable(containerId, teams) {
-        const container = document.getElementById(containerId);
+        var container = document.getElementById(containerId);
         if (!teams || teams.length === 0) {
             container.innerHTML = '<p class="loading-msg">No data available.</p>';
             return;
         }
+        var statKeys = Object.keys(teams[0]).filter(function (k) { return k !== 'rank' && k !== 'team'; });
+        var displayKeys = statKeys.slice(0, 10);
 
-        // Get stat keys (exclude rank and team)
-        const statKeys = Object.keys(teams[0]).filter(k => k !== 'rank' && k !== 'team');
-        const displayKeys = statKeys.slice(0, 10); // limit columns
-
-        let html = '<table class="standings-table"><thead><tr>';
-        html += '<th>#</th><th>Team</th>';
-        displayKeys.forEach(k => { html += `<th>${k}</th>`; });
+        var html = '<table class="standings-table"><thead><tr><th>#</th><th>Team</th>';
+        displayKeys.forEach(function (k) { html += '<th>' + k + '</th>'; });
         html += '</tr></thead><tbody>';
 
-        teams.forEach((t, i) => {
-            let rowClass = '';
-            if (i === 5) rowClass = 'playoff-line';  // 6 seed playoff cutoff
-            if (i === 9) rowClass = 'playin-line';     // 10 seed play-in cutoff
-
-            html += `<tr class="${rowClass}">`;
-            html += `<td>${t.rank}</td><td>${t.team}</td>`;
-            displayKeys.forEach(k => { html += `<td>${t[k] || ''}</td>`; });
+        teams.forEach(function (t, i) {
+            var cls = '';
+            if (i === 5) cls = 'playoff-line';
+            if (i === 9) cls = 'playin-line';
+            html += '<tr class="' + cls + '"><td>' + t.rank + '</td><td>' + t.team + '</td>';
+            displayKeys.forEach(function (k) { html += '<td>' + (t[k] || '') + '</td>'; });
             html += '</tr>';
         });
-
         html += '</tbody></table>';
         container.innerHTML = html;
     }
 
+    // ---- Playoffs ----
     async function loadPlayoffs() {
         try {
-            const res = await fetch('/api/playoffs');
-            const data = await res.json();
+            var res = await fetch('/api/playoffs');
+            var data = await res.json();
             renderPlayoffs(data);
         } catch (e) {
             document.getElementById('playoffsContainer').innerHTML = '<p class="loading-msg">Failed to load playoffs.</p>';
@@ -445,57 +454,56 @@
     }
 
     function renderPlayoffs(data) {
-        const container = document.getElementById('playoffsContainer');
-
-        if (data.champion) {
-            // Static bracket data
-            let html = '';
-
-            // Finals banner
-            html += `<div class="playoff-finals">
-                <h3>NBA Finals</h3>
-                <div class="champion">${data.champion}</div>
-                <div class="finals-score">${data.finals.team1} vs ${data.finals.team2} — ${data.finals.score}</div>
-            </div>`;
-
-            // West
-            html += '<div class="playoff-conf"><h3>Western Conference</h3>';
-            html += renderPlayoffRounds(data.west);
-            html += '</div>';
-
-            // East
-            html += '<div class="playoff-conf"><h3>Eastern Conference</h3>';
-            html += renderPlayoffRounds(data.east);
-            html += '</div>';
-
-            container.innerHTML = html;
-        } else {
+        var container = document.getElementById('playoffsContainer');
+        if (!data || !data.champion) {
             container.innerHTML = '<p class="loading-msg">Playoff data not available.</p>';
+            return;
         }
+        var html = '<div class="playoff-finals"><h3>NBA Finals</h3>' +
+            '<div class="champion">' + data.champion + '</div>' +
+            '<div class="finals-score">' + data.finals.team1 + ' vs ' + data.finals.team2 + ' — ' + data.finals.score + '</div></div>';
+
+        html += '<div class="playoff-conf"><h3>Western Conference</h3>' + renderRounds(data.west) + '</div>';
+        html += '<div class="playoff-conf"><h3>Eastern Conference</h3>' + renderRounds(data.east) + '</div>';
+        container.innerHTML = html;
     }
 
-    // ---- Teams Tab ----
-    let currentTeamData = null;
-    let activeTeamTable = 'roster';
+    function renderRounds(series) {
+        var rounds = {};
+        series.forEach(function (s) {
+            if (!rounds[s.round]) rounds[s.round] = [];
+            rounds[s.round].push(s);
+        });
+        var html = '';
+        for (var round in rounds) {
+            html += '<div class="playoff-round"><h4>' + round + '</h4>';
+            rounds[round].forEach(function (m) {
+                html += '<div class="playoff-series"><span class="teams">' + m.team1 + ' vs ' + m.team2 +
+                    '</span><span class="series-score">' + m.score + '</span></div>';
+            });
+            html += '</div>';
+        }
+        return html;
+    }
 
+    // ---- Teams ----
     async function loadTeamList() {
         try {
-            const res = await fetch('/api/teams');
-            const teams = await res.json();
-            const list = document.getElementById('teamList');
+            var res = await fetch('/api/teams');
+            var teams = await res.json();
+            var list = document.getElementById('teamList');
             list.innerHTML = '';
-            teams.forEach(t => {
-                const el = document.createElement('div');
+            teams.forEach(function (t) {
+                var el = document.createElement('div');
                 el.className = 'team-list-item' + (t.code === 'PHI' ? ' active' : '');
-                el.innerHTML = `<span class="team-code">${t.code}</span>${t.name}`;
-                el.addEventListener('click', () => {
-                    document.querySelectorAll('.team-list-item').forEach(i => i.classList.remove('active'));
+                el.innerHTML = '<span class="team-code">' + t.code + '</span>' + t.name;
+                el.addEventListener('click', function () {
+                    document.querySelectorAll('.team-list-item').forEach(function (i) { i.classList.remove('active'); });
                     el.classList.add('active');
                     loadTeamProfile(t.code);
                 });
                 list.appendChild(el);
             });
-            // Load default team
             loadTeamProfile('PHI');
         } catch (e) {
             document.getElementById('teamList').innerHTML = '<p class="loading-msg">Failed to load teams.</p>';
@@ -503,10 +511,10 @@
     }
 
     async function loadTeamProfile(code) {
-        const container = document.getElementById('teamTableContainer');
+        var container = document.getElementById('teamTableContainer');
         container.innerHTML = '<p class="team-loading">Loading...</p>';
         try {
-            const res = await fetch(`/api/teams/${code}`);
+            var res = await fetch('/api/teams/' + code);
             currentTeamData = await res.json();
             document.getElementById('teamName').textContent = currentTeamData.teamName;
             document.getElementById('teamRecord').textContent = currentTeamData.record || '';
@@ -519,8 +527,8 @@
 
     function renderTeamTable() {
         if (!currentTeamData) return;
-        const container = document.getElementById('teamTableContainer');
-        let tableData;
+        var container = document.getElementById('teamTableContainer');
+        var tableData;
         if (activeTeamTable === 'roster') tableData = currentTeamData.roster;
         else if (activeTeamTable === 'perGame') tableData = currentTeamData.perGame;
         else if (activeTeamTable === 'totals') tableData = currentTeamData.totals;
@@ -529,47 +537,25 @@
             container.innerHTML = '<p class="loading-msg">No data available for this view.</p>';
             return;
         }
-
-        let html = '<table class="team-table"><thead><tr>';
-        tableData.headers.forEach(h => { html += `<th>${h}</th>`; });
+        var html = '<table class="team-table"><thead><tr>';
+        tableData.headers.forEach(function (h) { html += '<th>' + h + '</th>'; });
         html += '</tr></thead><tbody>';
-        tableData.rows.forEach(row => {
+        tableData.rows.forEach(function (row) {
             html += '<tr>';
-            tableData.headers.forEach(h => { html += `<td>${row[h] || ''}</td>`; });
+            tableData.headers.forEach(function (h) { html += '<td>' + (row[h] || '') + '</td>'; });
             html += '</tr>';
         });
         html += '</tbody></table>';
         container.innerHTML = html;
     }
 
-    document.querySelectorAll('.team-stat-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.team-stat-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.team-stat-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            document.querySelectorAll('.team-stat-tab').forEach(function (t) { t.classList.remove('active'); });
             tab.classList.add('active');
             activeTeamTable = tab.dataset.teamTable;
             renderTeamTable();
         });
     });
-
-    function renderPlayoffRounds(series) {
-        const rounds = {};
-        series.forEach(s => {
-            if (!rounds[s.round]) rounds[s.round] = [];
-            rounds[s.round].push(s);
-        });
-
-        let html = '';
-        for (const [round, matchups] of Object.entries(rounds)) {
-            html += `<div class="playoff-round"><h4>${round}</h4>`;
-            matchups.forEach(m => {
-                html += `<div class="playoff-series">
-                    <span class="teams">${m.team1} vs ${m.team2}</span>
-                    <span class="series-score">${m.score}</span>
-                </div>`;
-            });
-            html += '</div>';
-        }
-        return html;
-    }
 
 })();
