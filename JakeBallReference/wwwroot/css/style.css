@@ -33,6 +33,7 @@ body {
     color: var(--text-primary);
     min-height: 100vh;
     overflow-x: auto;
+    padding-bottom: 90px;
 }
 
 /* Header */
@@ -1097,6 +1098,22 @@ main {
     max-width: 900px;
     margin: 0 auto;
     padding: 24px;
+}
+
+/* Spotify player */
+.spotify-fixed {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    padding: 0;
+}
+
+.spotify-fixed iframe {
+    display: block;
 }
 
 /* Responsive */
