@@ -350,14 +350,20 @@
     render();
 
     // ---- Page Tabs (Players / Standings) ----
+    let standingsLoaded = false;
+    const $headerControls = document.querySelector('.header-controls');
+
     document.querySelectorAll('.page-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             tab.classList.add('active');
-            const page = document.getElementById(tab.dataset.page + 'Page');
-            page.classList.add('active');
-            page.style.display = 'block';
+            document.getElementById(tab.dataset.page + 'Page').classList.add('active');
+
+            // Toggle header controls visibility
+            if ($headerControls) {
+                $headerControls.style.display = tab.dataset.page === 'players' ? '' : 'none';
+            }
 
             if (tab.dataset.page === 'standings' && !standingsLoaded) {
                 loadStandings();
@@ -366,8 +372,6 @@
             }
         });
     });
-
-    let standingsLoaded = false;
 
     async function loadStandings() {
         try {
