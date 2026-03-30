@@ -74,12 +74,32 @@ public class StandingsScraper
         {
             var team = new Dictionary<string, string>();
 
-            // Team name from the name table
-            var nameCell = nameRows[i].SelectSingleNode(".//span[contains(@class,'TeamLink')]//a")
-                ?? nameRows[i].SelectSingleNode(".//a")
-                ?? nameRows[i].SelectSingleNode(".//td");
+            // Team name - try multiple selectors for robustness
+            var teamName = $"Team {i + 1}";
 
-            var teamName = WebUtility.HtmlDecode(nameCell?.InnerText?.Trim() ?? $"Team {i + 1}");
+            // Try: all anchor tags in the name row, pick the one with the longest text (full team name)
+            var allLinks = nameRows[i].SelectNodes(".//a");
+            if (allLinks != null)
+            {
+                var best = allLinks
+                    .Select(a => WebUtility.HtmlDecode(a.InnerText.Trim()))
+                    .Where(t => t.Length > 2)
+                    .OrderByDescending(t => t.Length)
+                    .FirstOrDefault();
+                if (!string.IsNullOrEmpty(best))
+                    teamName = best;
+            }
+
+            // Fallback: just get all text from the row
+            if (teamName.StartsWith("Team "))
+            {
+                var rowText = WebUtility.HtmlDecode(nameRows[i].InnerText.Trim());
+                // Clean up - remove rank numbers and extra whitespace
+                var cleaned = System.Text.RegularExpressions.Regex.Replace(rowText, @"^\d+", "").Trim();
+                if (cleaned.Length > 2)
+                    teamName = cleaned.Split('\n')[0].Trim();
+            }
+
             team["rank"] = (i + 1).ToString();
             team["team"] = teamName;
 
@@ -101,59 +121,43 @@ public class StandingsScraper
 
     public async Task<object> GetPlayoffBracketAsync()
     {
-        const string cacheKey = "nba_playoffs";
+        const string cacheKey = "nba_playoff_picture";
         if (_cache.TryGetValue(cacheKey, out object? cached) && cached != null)
             return cached;
 
-        var url = "https://www.espn.com/nba/bracket";
-        _logger.LogInformation("Fetching playoff bracket: {Url}", url);
+        // Build projected playoff picture from current standings
+        var standings = await GetStandingsAsync();
+        var eastProp = standings.GetType().GetProperty("east");
+        var westProp = standings.GetType().GetProperty("west");
+        var east = eastProp?.GetValue(standings) as List<Dictionary<string, string>> ?? new();
+        var west = westProp?.GetValue(standings) as List<Dictionary<string, string>> ?? new();
 
-        var response = await _http.GetAsync(url);
-        response.EnsureSuccessStatusCode();
-        var html = await response.Content.ReadAsStringAsync();
-
-        var doc = new HtmlDocument();
-        doc.LoadHtml(html);
-
-        var matchups = new List<Dictionary<string, string>>();
-
-        // ESPN bracket uses matchup containers
-        var series = doc.DocumentNode.SelectNodes("//div[contains(@class,'bracket')]//section|//div[contains(@class,'matchup')]|//li[contains(@class,'matchup')]");
-
-        if (series != null)
+        object buildConference(List<Dictionary<string, string>> teams)
         {
-            foreach (var s in series)
-            {
-                var teams = s.SelectNodes(".//span[contains(@class,'team-name')]|.//a[contains(@class,'team')]|.//div[contains(@class,'competitor')]");
-                var scores = s.SelectNodes(".//span[contains(@class,'score')]|.//div[contains(@class,'wins')]");
+            var playoff = teams.Take(6).Select((t, i) => new { seed = i + 1, team = t.GetValueOrDefault("team", "TBD"), record = t.GetValueOrDefault("W", "0") + "-" + t.GetValueOrDefault("L", "0") }).ToList();
+            var playIn = teams.Skip(6).Take(4).Select((t, i) => new { seed = i + 7, team = t.GetValueOrDefault("team", "TBD"), record = t.GetValueOrDefault("W", "0") + "-" + t.GetValueOrDefault("L", "0") }).ToList();
 
-                if (teams != null && teams.Count >= 2)
-                {
-                    var matchup = new Dictionary<string, string>
-                    {
-                        ["team1"] = WebUtility.HtmlDecode(teams[0].InnerText.Trim()),
-                        ["team2"] = WebUtility.HtmlDecode(teams[1].InnerText.Trim()),
-                        ["score1"] = scores?.Count > 0 ? scores[0].InnerText.Trim() : "",
-                        ["score2"] = scores?.Count > 1 ? scores[1].InnerText.Trim() : ""
-                    };
-                    matchups.Add(matchup);
-                }
+            // Projected first round matchups: 1v8, 2v7, 3v6, 4v5
+            var firstRound = new List<object>();
+            if (teams.Count >= 8)
+            {
+                firstRound.Add(new { higher = $"(1) {teams[0].GetValueOrDefault("team", "TBD")}", lower = $"(8) {teams[7].GetValueOrDefault("team", "TBD")}" });
+                firstRound.Add(new { higher = $"(2) {teams[1].GetValueOrDefault("team", "TBD")}", lower = $"(7) {teams[6].GetValueOrDefault("team", "TBD")}" });
+                firstRound.Add(new { higher = $"(3) {teams[2].GetValueOrDefault("team", "TBD")}", lower = $"(6) {teams[5].GetValueOrDefault("team", "TBD")}" });
+                firstRound.Add(new { higher = $"(4) {teams[3].GetValueOrDefault("team", "TBD")}", lower = $"(5) {teams[4].GetValueOrDefault("team", "TBD")}" });
             }
+
+            return new { playoff, playIn, firstRound };
         }
 
-        // If scraping fails or playoffs haven't started
-        if (matchups.Count == 0)
+        var result = new
         {
-            var result = new
-            {
-                status = "Playoffs have not yet started for the 2025-26 season.",
-                champion = (string?)null
-            };
-            _cache.Set(cacheKey, (object)result, CacheDuration);
-            return result;
-        }
+            type = "projected",
+            east = buildConference(east),
+            west = buildConference(west)
+        };
 
-        _cache.Set(cacheKey, (object)matchups, CacheDuration);
-        return matchups;
+        _cache.Set(cacheKey, (object)result, CacheDuration);
+        return result;
     }
 }

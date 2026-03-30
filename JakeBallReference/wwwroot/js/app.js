@@ -356,7 +356,7 @@
             if (res.ok) {
                 const profile = await res.json();
                 state.players.push({ id: 'embiijo01', profile, filteredStats: null });
-                applyCurrentFilter();
+                applyFilter();
                 render();
             }
         } catch (e) {
@@ -457,35 +457,48 @@
 
     function renderPlayoffs(data) {
         var container = document.getElementById('playoffsContainer');
-        if (!data || !data.champion) {
-            var msg = (data && data.status) ? data.status : 'Playoff data not available.';
-            container.innerHTML = '<p class="loading-msg">' + msg + '</p>';
+        if (!data || !data.east) {
+            container.innerHTML = '<p class="loading-msg">Playoff data not available.</p>';
             return;
         }
-        var html = '<div class="playoff-finals"><h3>NBA Finals</h3>' +
-            '<div class="champion">' + data.champion + '</div>' +
-            '<div class="finals-score">' + data.finals.team1 + ' vs ' + data.finals.team2 + ' — ' + data.finals.score + '</div></div>';
 
-        html += '<div class="playoff-conf"><h3>Western Conference</h3>' + renderRounds(data.west) + '</div>';
-        html += '<div class="playoff-conf"><h3>Eastern Conference</h3>' + renderRounds(data.east) + '</div>';
+        var html = '';
+        html += renderConferenceBracket('Eastern Conference', data.east);
+        html += renderConferenceBracket('Western Conference', data.west);
         container.innerHTML = html;
     }
 
-    function renderRounds(series) {
-        var rounds = {};
-        series.forEach(function (s) {
-            if (!rounds[s.round]) rounds[s.round] = [];
-            rounds[s.round].push(s);
-        });
-        var html = '';
-        for (var round in rounds) {
-            html += '<div class="playoff-round"><h4>' + round + '</h4>';
-            rounds[round].forEach(function (m) {
-                html += '<div class="playoff-series"><span class="teams">' + m.team1 + ' vs ' + m.team2 +
-                    '</span><span class="series-score">' + m.score + '</span></div>';
+    function renderConferenceBracket(title, conf) {
+        var html = '<div class="playoff-conf"><h3>' + title + '</h3>';
+
+        // Clinched playoff spots (1-6)
+        if (conf.playoff && conf.playoff.length) {
+            html += '<div class="playoff-round"><h4>Playoff Seeds (1-6)</h4>';
+            conf.playoff.forEach(function (t) {
+                html += '<div class="playoff-series"><span class="teams">(' + t.seed + ') ' + t.team + '</span><span class="series-score">' + t.record + '</span></div>';
             });
             html += '</div>';
         }
+
+        // Play-in (7-10)
+        if (conf.playIn && conf.playIn.length) {
+            html += '<div class="playoff-round"><h4>Play-In Tournament (7-10)</h4>';
+            conf.playIn.forEach(function (t) {
+                html += '<div class="playoff-series"><span class="teams">(' + t.seed + ') ' + t.team + '</span><span class="series-score">' + t.record + '</span></div>';
+            });
+            html += '</div>';
+        }
+
+        // Projected first round
+        if (conf.firstRound && conf.firstRound.length) {
+            html += '<div class="playoff-round"><h4>Projected First Round</h4>';
+            conf.firstRound.forEach(function (m) {
+                html += '<div class="playoff-series"><span class="teams">' + m.higher + ' vs ' + m.lower + '</span></div>';
+            });
+            html += '</div>';
+        }
+
+        html += '</div>';
         return html;
     }
 
