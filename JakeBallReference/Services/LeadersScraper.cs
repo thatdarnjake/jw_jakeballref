@@ -15,6 +15,21 @@ public class LeadersScraper
     private static DateTime _lastRequest = DateTime.MinValue;
     private static readonly TimeSpan _minDelay = TimeSpan.FromSeconds(3);
 
+    // The per-game leader categories we want to show
+    private static readonly string[] PerGameCategories = new[]
+    {
+        "leaders_pts_per_g", "leaders_trb_per_g", "leaders_ast_per_g",
+        "leaders_stl_per_g", "leaders_blk_per_g",
+        "leaders_fg_pct", "leaders_ft_pct", "leaders_fg3_pct", "leaders_efg_pct"
+    };
+
+    // Total categories
+    private static readonly string[] TotalCategories = new[]
+    {
+        "leaders_pts", "leaders_trb", "leaders_ast",
+        "leaders_stl", "leaders_blk", "leaders_orb", "leaders_drb"
+    };
+
     public LeadersScraper(HttpClient http, IMemoryCache cache, ILogger<LeadersScraper> logger)
     {
         _http = http;
@@ -57,104 +72,72 @@ public class LeadersScraper
         var url = $"https://www.basketball-reference.com/leagues/NBA_{year}_leaders.html";
         var doc = await FetchPageAsync(url);
 
-        var categories = new List<object>();
-
-        // bball-ref leaders page has div.data_grid_box containers
-        // Each contains an h4 title and a table or ordered list of leaders
-        var boxes = doc.DocumentNode.SelectNodes("//div[contains(@class,'data_grid_box')]");
-
-        if (boxes != null)
+        var perGame = new List<object>();
+        foreach (var id in PerGameCategories)
         {
-            foreach (var box in boxes)
+            var cat = ParseLeaderDiv(doc, id);
+            if (cat != null) perGame.Add(cat);
+        }
+
+        var totals = new List<object>();
+        foreach (var id in TotalCategories)
+        {
+            var cat = ParseLeaderDiv(doc, id);
+            if (cat != null) totals.Add(cat);
+        }
+
+        var result = new
+        {
+            season = $"{year - 1}-{year.ToString()[2..]}",
+            perGame,
+            totals
+        };
+
+        _cache.Set(cacheKey, (object)result, CacheDuration);
+        return result;
+    }
+
+    private object? ParseLeaderDiv(HtmlDocument doc, string divId)
+    {
+        var div = doc.DocumentNode.SelectSingleNode($"//div[@id='{divId}']");
+        if (div == null) return null;
+
+        // Title from h4
+        var titleNode = div.SelectSingleNode(".//h4");
+        var title = WebUtility.HtmlDecode(titleNode?.InnerText?.Trim() ?? divId);
+
+        var entries = new List<object>();
+
+        // Each entry is a div with span.rank, span.who (contains a link + team), span.value
+        var entryDivs = div.SelectNodes(".//div[span[@class='rank']]");
+        if (entryDivs != null)
+        {
+            foreach (var entry in entryDivs.Take(10))
             {
-                var titleNode = box.SelectSingleNode(".//caption|.//h4");
-                var title = WebUtility.HtmlDecode(titleNode?.InnerText?.Trim() ?? "");
-                if (string.IsNullOrEmpty(title)) continue;
+                var rankText = entry.SelectSingleNode(".//span[@class='rank']")?.InnerText?.Trim().TrimEnd('.');
+                var playerLink = entry.SelectSingleNode(".//span[@class='who']//a");
+                var playerName = WebUtility.HtmlDecode(playerLink?.InnerText?.Trim() ?? "");
+                var teamSpan = entry.SelectSingleNode(".//span[@class='who']//span[@class='desc']");
+                var team = WebUtility.HtmlDecode(teamSpan?.InnerText?.Trim() ?? "");
+                var value = WebUtility.HtmlDecode(entry.SelectSingleNode(".//span[@class='value']")?.InnerText?.Trim() ?? "");
 
-                var entries = new List<object>();
+                var href = playerLink?.GetAttributeValue("href", "") ?? "";
+                var idMatch = Regex.Match(href, @"/players/\w/(\w+)\.html");
 
-                // Try table rows first (bball-ref uses tables with tbody/tr)
-                var rows = box.SelectNodes(".//table//tbody//tr|.//table//tr[td]");
-                if (rows != null)
+                if (!string.IsNullOrEmpty(playerName))
                 {
-                    foreach (var row in rows.Take(10))
+                    entries.Add(new
                     {
-                        var cells = row.SelectNodes(".//td");
-                        if (cells == null || cells.Count < 2) continue;
-
-                        // First cell usually has rank + player name link, last cell has stat value
-                        var playerLink = row.SelectSingleNode(".//a");
-                        var playerName = WebUtility.HtmlDecode(playerLink?.InnerText?.Trim() ?? "");
-                        if (string.IsNullOrEmpty(playerName))
-                        {
-                            playerName = WebUtility.HtmlDecode(cells[0].InnerText.Trim());
-                        }
-
-                        // Get player ID from href
-                        var href = playerLink?.GetAttributeValue("href", "") ?? "";
-                        var idMatch = Regex.Match(href, @"/players/\w/(\w+)\.html");
-                        var playerId = idMatch.Success ? idMatch.Groups[1].Value : "";
-
-                        // Stat value is typically the last cell
-                        var statValue = WebUtility.HtmlDecode(cells[cells.Count - 1].InnerText.Trim());
-
-                        // Clean player name - remove rank numbers
-                        playerName = Regex.Replace(playerName, @"^\d+\.\s*", "").Trim();
-
-                        if (!string.IsNullOrEmpty(playerName))
-                        {
-                            entries.Add(new
-                            {
-                                rank = entries.Count + 1,
-                                player = playerName,
-                                playerId,
-                                value = statValue
-                            });
-                        }
-                    }
-                }
-
-                // Fallback: try ordered list items
-                if (entries.Count == 0)
-                {
-                    var listItems = box.SelectNodes(".//ol/li|.//p");
-                    if (listItems != null)
-                    {
-                        foreach (var li in listItems.Take(10))
-                        {
-                            var link = li.SelectSingleNode(".//a");
-                            var name = WebUtility.HtmlDecode(link?.InnerText?.Trim() ?? "");
-                            var href = link?.GetAttributeValue("href", "") ?? "";
-                            var idMatch = Regex.Match(href, @"/players/\w/(\w+)\.html");
-                            var text = WebUtility.HtmlDecode(li.InnerText.Trim());
-
-                            // Extract stat value (usually a number at the end)
-                            var valMatch = Regex.Match(text, @"([\d.]+)\s*$");
-                            var value = valMatch.Success ? valMatch.Groups[1].Value : "";
-
-                            if (!string.IsNullOrEmpty(name))
-                            {
-                                entries.Add(new
-                                {
-                                    rank = entries.Count + 1,
-                                    player = name,
-                                    playerId = idMatch.Success ? idMatch.Groups[1].Value : "",
-                                    value
-                                });
-                            }
-                        }
-                    }
-                }
-
-                if (entries.Count > 0)
-                {
-                    categories.Add(new { title, entries });
+                        rank = int.TryParse(rankText, out var r) ? r : entries.Count + 1,
+                        player = playerName,
+                        team,
+                        playerId = idMatch.Success ? idMatch.Groups[1].Value : "",
+                        value
+                    });
                 }
             }
         }
 
-        var result = new { season = $"{year - 1}-{year.ToString()[2..]}", categories };
-        _cache.Set(cacheKey, (object)result, CacheDuration);
-        return result;
+        return entries.Count > 0 ? new { title, entries } : null;
     }
 }
