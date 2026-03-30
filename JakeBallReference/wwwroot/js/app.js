@@ -375,6 +375,7 @@
 
     let standingsLoaded = false;
     let teamsLoaded = false;
+    let leadersLoaded = false;
     let currentTeamData = null;
     let activeTeamTable = 'roster';
     const headerControls = document.getElementById('headerControls');
@@ -402,6 +403,10 @@
             if (tab.dataset.page === 'teams' && !teamsLoaded) {
                 loadTeamList();
                 teamsLoaded = true;
+            }
+            if (tab.dataset.page === 'leaders' && !leadersLoaded) {
+                loadLeaders();
+                leadersLoaded = true;
             }
         });
     });
@@ -573,5 +578,40 @@
             renderTeamTable();
         });
     });
+
+    // ---- Leaders ----
+    async function loadLeaders() {
+        var grid = document.getElementById('leadersGrid');
+        try {
+            var res = await fetch('/api/leaders');
+            var data = await res.json();
+            renderLeaders(data);
+        } catch (e) {
+            grid.innerHTML = '<p class="loading-msg">Failed to load leaders.</p>';
+        }
+    }
+
+    function renderLeaders(data) {
+        var grid = document.getElementById('leadersGrid');
+        if (!data || !data.categories || data.categories.length === 0) {
+            grid.innerHTML = '<p class="loading-msg">No leader data available.</p>';
+            return;
+        }
+
+        var html = '';
+        data.categories.forEach(function (cat) {
+            html += '<div class="leader-card"><h3>' + cat.title + '</h3>';
+            cat.entries.forEach(function (e) {
+                html += '<div class="leader-entry">' +
+                    '<span class="leader-rank">' + e.rank + '</span>' +
+                    '<span class="leader-name" data-player-id="' + (e.playerId || '') + '">' + e.player + '</span>' +
+                    '<span class="leader-value">' + e.value + '</span>' +
+                    '</div>';
+            });
+            html += '</div>';
+        });
+
+        grid.innerHTML = html;
+    }
 
 })();
