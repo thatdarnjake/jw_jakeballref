@@ -545,6 +545,219 @@ main {
     font-size: 0.85rem;
 }
 
+/* Page tabs */
+.page-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--bg-input);
+    border-radius: var(--radius);
+    padding: 3px;
+    margin-top: 12px;
+    border: 1px solid var(--border);
+    width: fit-content;
+}
+
+.page-tab {
+    background: none;
+    border: none;
+    padding: 7px 18px;
+    font-family: var(--font-sans);
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.page-tab:hover { color: var(--text-secondary); }
+.page-tab.active {
+    background: var(--accent);
+    color: white;
+}
+
+.page { display: none; }
+.page.active { display: block; }
+
+/* Standings */
+.standings-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.standings-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+.standings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.conference-col h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent-hover);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.standings-table-wrap {
+    overflow-x: auto;
+}
+
+.standings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+}
+
+.standings-table th {
+    padding: 6px 8px;
+    text-align: right;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.standings-table th:first-child,
+.standings-table th:nth-child(2) {
+    text-align: left;
+}
+
+.standings-table td {
+    padding: 6px 8px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.standings-table td:first-child {
+    text-align: center;
+    color: var(--text-muted);
+    font-weight: 600;
+    width: 28px;
+}
+
+.standings-table td:nth-child(2) {
+    text-align: left;
+    font-weight: 500;
+}
+
+.standings-table tbody tr:hover td {
+    background: var(--bg-card-hover);
+}
+
+.standings-table tr.playoff-line td {
+    border-bottom: 2px solid var(--accent);
+}
+
+.standings-table tr.playin-line td {
+    border-bottom: 2px dashed var(--gold);
+}
+
+.loading-msg {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 20px;
+    text-align: center;
+}
+
+/* Playoffs bracket */
+.playoffs-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.playoff-conf {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+}
+
+.playoff-conf h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent-hover);
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.playoff-round {
+    margin-bottom: 16px;
+}
+
+.playoff-round h4 {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+
+.playoff-series {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: var(--bg-input);
+    border-radius: var(--radius);
+    margin-bottom: 4px;
+    font-size: 0.78rem;
+}
+
+.playoff-series .teams {
+    color: var(--text-primary);
+}
+
+.playoff-series .series-score {
+    color: var(--gold);
+    font-weight: 600;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+}
+
+.playoff-finals {
+    background: linear-gradient(135deg, var(--bg-card), var(--accent-dim));
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    text-align: center;
+    grid-column: 1 / -1;
+}
+
+.playoff-finals h3 {
+    font-size: 1rem;
+    color: var(--gold);
+    margin-bottom: 8px;
+}
+
+.playoff-finals .champion {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.playoff-finals .finals-score {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .header-content {
@@ -563,5 +776,10 @@ main {
 
     .stat-type-toggle {
         margin-left: 0;
+    }
+
+    .standings-grid,
+    .playoffs-container {
+        grid-template-columns: 1fr;
     }
 }

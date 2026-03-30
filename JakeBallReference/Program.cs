@@ -12,6 +12,14 @@ builder.Services.AddHttpClient<BballRefScraper>(client =>
     client.Timeout = TimeSpan.FromSeconds(15);
 });
 
+builder.Services.AddHttpClient<StandingsScraper>(client =>
+{
+    client.DefaultRequestHeaders.Add("User-Agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+    client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+
 var app = builder.Build();
 
 app.UseDefaultFiles();
@@ -51,6 +59,34 @@ app.MapGet("/api/players/{playerId}", async (string playerId, BballRefScraper sc
     catch (Exception ex)
     {
         return Results.Problem($"Failed to load player: {ex.Message}");
+    }
+});
+
+// Standings
+app.MapGet("/api/standings", async (StandingsScraper scraper) =>
+{
+    try
+    {
+        var standings = await scraper.GetStandingsAsync();
+        return Results.Ok(standings);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to load standings: {ex.Message}");
+    }
+});
+
+// Playoffs
+app.MapGet("/api/playoffs", async (StandingsScraper scraper) =>
+{
+    try
+    {
+        var playoffs = await scraper.GetPlayoffBracketAsync();
+        return Results.Ok(playoffs);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to load playoffs: {ex.Message}");
     }
 });
 

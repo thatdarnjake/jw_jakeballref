@@ -348,4 +348,129 @@
 
     // Init
     render();
+
+    // ---- Page Tabs (Players / Standings) ----
+    document.querySelectorAll('.page-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+            tab.classList.add('active');
+            const page = document.getElementById(tab.dataset.page + 'Page');
+            page.classList.add('active');
+            page.style.display = 'block';
+
+            if (tab.dataset.page === 'standings' && !standingsLoaded) {
+                loadStandings();
+                loadPlayoffs();
+                standingsLoaded = true;
+            }
+        });
+    });
+
+    let standingsLoaded = false;
+
+    async function loadStandings() {
+        try {
+            const res = await fetch('/api/standings');
+            const data = await res.json();
+            renderStandingsTable('eastStandings', data.east);
+            renderStandingsTable('westStandings', data.west);
+        } catch (e) {
+            document.getElementById('eastStandings').innerHTML = '<p class="loading-msg">Failed to load standings.</p>';
+            document.getElementById('westStandings').innerHTML = '<p class="loading-msg">Failed to load standings.</p>';
+        }
+    }
+
+    function renderStandingsTable(containerId, teams) {
+        const container = document.getElementById(containerId);
+        if (!teams || teams.length === 0) {
+            container.innerHTML = '<p class="loading-msg">No data available.</p>';
+            return;
+        }
+
+        // Get stat keys (exclude rank and team)
+        const statKeys = Object.keys(teams[0]).filter(k => k !== 'rank' && k !== 'team');
+        const displayKeys = statKeys.slice(0, 10); // limit columns
+
+        let html = '<table class="standings-table"><thead><tr>';
+        html += '<th>#</th><th>Team</th>';
+        displayKeys.forEach(k => { html += `<th>${k}</th>`; });
+        html += '</tr></thead><tbody>';
+
+        teams.forEach((t, i) => {
+            let rowClass = '';
+            if (i === 5) rowClass = 'playoff-line';  // 6 seed playoff cutoff
+            if (i === 9) rowClass = 'playin-line';     // 10 seed play-in cutoff
+
+            html += `<tr class="${rowClass}">`;
+            html += `<td>${t.rank}</td><td>${t.team}</td>`;
+            displayKeys.forEach(k => { html += `<td>${t[k] || ''}</td>`; });
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    async function loadPlayoffs() {
+        try {
+            const res = await fetch('/api/playoffs');
+            const data = await res.json();
+            renderPlayoffs(data);
+        } catch (e) {
+            document.getElementById('playoffsContainer').innerHTML = '<p class="loading-msg">Failed to load playoffs.</p>';
+        }
+    }
+
+    function renderPlayoffs(data) {
+        const container = document.getElementById('playoffsContainer');
+
+        if (data.champion) {
+            // Static bracket data
+            let html = '';
+
+            // Finals banner
+            html += `<div class="playoff-finals">
+                <h3>NBA Finals</h3>
+                <div class="champion">${data.champion}</div>
+                <div class="finals-score">${data.finals.team1} vs ${data.finals.team2} — ${data.finals.score}</div>
+            </div>`;
+
+            // West
+            html += '<div class="playoff-conf"><h3>Western Conference</h3>';
+            html += renderPlayoffRounds(data.west);
+            html += '</div>';
+
+            // East
+            html += '<div class="playoff-conf"><h3>Eastern Conference</h3>';
+            html += renderPlayoffRounds(data.east);
+            html += '</div>';
+
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = '<p class="loading-msg">Playoff data not available.</p>';
+        }
+    }
+
+    function renderPlayoffRounds(series) {
+        const rounds = {};
+        series.forEach(s => {
+            if (!rounds[s.round]) rounds[s.round] = [];
+            rounds[s.round].push(s);
+        });
+
+        let html = '';
+        for (const [round, matchups] of Object.entries(rounds)) {
+            html += `<div class="playoff-round"><h4>${round}</h4>`;
+            matchups.forEach(m => {
+                html += `<div class="playoff-series">
+                    <span class="teams">${m.team1} vs ${m.team2}</span>
+                    <span class="series-score">${m.score}</span>
+                </div>`;
+            });
+            html += '</div>';
+        }
+        return html;
+    }
+
 })();
