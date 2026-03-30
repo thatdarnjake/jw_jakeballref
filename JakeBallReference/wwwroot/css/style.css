@@ -863,12 +863,12 @@ main {
 .team-stat-tab {
     background: none;
     border: none;
-    padding: 6px 16px;
+    padding: 8px 20px;
     font-family: var(--font-sans);
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: 500;
     color: var(--text-muted);
-    border-radius: 5px;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -954,12 +954,12 @@ main {
 .leaders-tab {
     background: none;
     border: none;
-    padding: 6px 16px;
+    padding: 8px 20px;
     font-family: var(--font-sans);
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: 500;
     color: var(--text-muted);
-    border-radius: 5px;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -973,6 +973,46 @@ main {
     font-family: var(--font-mono);
     width: 36px;
     text-align: center;
+}
+
+.alltime-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.alltime-controls select {
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 14px;
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.alltime-controls select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.alltime-go {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 8px 20px;
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.alltime-go:hover {
+    background: var(--accent-hover);
 }
 
 .hof-badge {

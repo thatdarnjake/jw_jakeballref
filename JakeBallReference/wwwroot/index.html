@@ -102,8 +102,28 @@
                 <div class="leaders-sub-tabs">
                     <button class="leaders-tab active" data-leaders-view="perGame">Per Game</button>
                     <button class="leaders-tab" data-leaders-view="totals">Totals</button>
-                    <button class="leaders-tab" data-leaders-view="alltimeReg">All-Time Reg Season</button>
-                    <button class="leaders-tab" data-leaders-view="alltimePlayoffs">All-Time Playoffs</button>
+                    <button class="leaders-tab" data-leaders-view="alltime">All-Time</button>
+                </div>
+                <div class="alltime-controls" id="alltimeControls" style="display:none;">
+                    <select id="alltimeStat">
+                        <option value="pts">Points</option>
+                        <option value="trb">Rebounds</option>
+                        <option value="ast">Assists</option>
+                        <option value="stl">Steals</option>
+                        <option value="blk">Blocks</option>
+                        <option value="fg">Field Goals</option>
+                        <option value="fg3">3-Pointers</option>
+                        <option value="ft">Free Throws</option>
+                        <option value="g">Games Played</option>
+                        <option value="mp">Minutes Played</option>
+                    </select>
+                    <select id="alltimeType">
+                        <option value="career">Career (Reg Season)</option>
+                        <option value="season">Single Season</option>
+                        <option value="career_p">Career (Playoffs)</option>
+                        <option value="active">Active Players</option>
+                    </select>
+                    <button class="alltime-go" id="alltimeGo">Go</button>
                 </div>
                 <div class="leaders-grid" id="leadersGrid">
                     <p class="loading-msg">Loading leaders...</p>

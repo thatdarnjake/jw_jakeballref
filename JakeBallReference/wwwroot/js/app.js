@@ -581,9 +581,8 @@
 
     // ---- Leaders ----
     var leadersData = null;
-    var alltimeRegData = null;
-    var alltimePlayoffsData = null;
     var leadersView = 'perGame';
+    var alltimeControls = document.getElementById('alltimeControls');
 
     async function loadLeaders() {
         var grid = document.getElementById('leadersGrid');
@@ -596,50 +595,51 @@
         }
     }
 
-    async function loadAllTimeLeaders(type) {
-        var grid = document.getElementById('leadersGrid');
-        grid.innerHTML = '<p class="loading-msg">Loading all-time leaders (this may take a moment)...</p>';
-        try {
-            var res = await fetch('/api/leaders/alltime?type=' + type);
-            var data = await res.json();
-            if (type === 'playoffs') alltimePlayoffsData = data;
-            else alltimeRegData = data;
-            renderLeaders();
-        } catch (e) {
-            grid.innerHTML = '<p class="loading-msg">Failed to load all-time leaders.</p>';
-        }
-    }
-
     function renderLeaders() {
         var grid = document.getElementById('leadersGrid');
         var cats = null;
 
         if (leadersView === 'perGame' && leadersData) cats = leadersData.perGame;
         else if (leadersView === 'totals' && leadersData) cats = leadersData.totals;
-        else if (leadersView === 'alltimeReg' && alltimeRegData) cats = alltimeRegData.categories;
-        else if (leadersView === 'alltimePlayoffs' && alltimePlayoffsData) cats = alltimePlayoffsData.categories;
 
         if (!cats || cats.length === 0) {
-            grid.innerHTML = '<p class="loading-msg">No leader data available.</p>';
+            if (leadersView !== 'alltime') grid.innerHTML = '<p class="loading-msg">No leader data available.</p>';
             return;
         }
 
-        var isAllTime = leadersView.startsWith('alltime');
         var html = '';
         cats.forEach(function (cat) {
             html += '<div class="leader-card"><h3>' + cat.title + '</h3>';
             cat.entries.forEach(function (e) {
-                var nameDisplay = e.player + (e.hof ? ' <span class="hof-badge">HOF</span>' : '');
                 html += '<div class="leader-entry">' +
                     '<span class="leader-rank">' + e.rank + '</span>' +
-                    '<span class="leader-name">' + nameDisplay + '</span>' +
+                    '<span class="leader-name">' + e.player + '</span>' +
                     (e.team ? '<span class="leader-team">' + e.team + '</span>' : '') +
                     '<span class="leader-value">' + e.value + '</span>' +
                     '</div>';
             });
             html += '</div>';
         });
+        grid.innerHTML = html;
+    }
 
+    function renderAllTimeResults(data) {
+        var grid = document.getElementById('leadersGrid');
+        if (!data || !data.entries || data.entries.length === 0) {
+            grid.innerHTML = '<p class="loading-msg">No data found.</p>';
+            return;
+        }
+
+        var html = '<div class="leader-card" style="max-width:600px;"><h3>' + data.title + ' — ' + data.typeLabel + '</h3>';
+        data.entries.forEach(function (e) {
+            var nameDisplay = e.player + (e.hof ? ' <span class="hof-badge">HOF</span>' : '');
+            html += '<div class="leader-entry">' +
+                '<span class="leader-rank">' + e.rank + '</span>' +
+                '<span class="leader-name">' + nameDisplay + '</span>' +
+                '<span class="leader-value">' + e.value + '</span>' +
+                '</div>';
+        });
+        html += '</div>';
         grid.innerHTML = html;
     }
 
@@ -649,14 +649,28 @@
             tab.classList.add('active');
             leadersView = tab.dataset.leadersView;
 
-            if (leadersView === 'alltimeReg' && !alltimeRegData) {
-                loadAllTimeLeaders('career');
-            } else if (leadersView === 'alltimePlayoffs' && !alltimePlayoffsData) {
-                loadAllTimeLeaders('playoffs');
+            if (leadersView === 'alltime') {
+                alltimeControls.style.display = 'flex';
+                document.getElementById('leadersGrid').innerHTML = '<p class="loading-msg">Select a stat and type, then click Go.</p>';
             } else {
+                alltimeControls.style.display = 'none';
                 renderLeaders();
             }
         });
+    });
+
+    document.getElementById('alltimeGo').addEventListener('click', async function () {
+        var stat = document.getElementById('alltimeStat').value;
+        var type = document.getElementById('alltimeType').value;
+        var grid = document.getElementById('leadersGrid');
+        grid.innerHTML = '<p class="loading-msg">Loading...</p>';
+        try {
+            var res = await fetch('/api/leaders/alltime?stat=' + stat + '&type=' + type);
+            var data = await res.json();
+            renderAllTimeResults(data);
+        } catch (e) {
+            grid.innerHTML = '<p class="loading-msg">Failed to load.</p>';
+        }
     });
 
 })();

@@ -122,12 +122,12 @@ app.MapGet("/api/leaders", async (int? season, LeadersScraper scraper) =>
     }
 });
 
-// All-time leaders
-app.MapGet("/api/leaders/alltime", async (string? type, LeadersScraper scraper) =>
+// All-time leaders (single stat query)
+app.MapGet("/api/leaders/alltime", async (string stat, string type, LeadersScraper scraper) =>
 {
     try
     {
-        var leaders = await scraper.GetAllTimeLeadersAsync(type ?? "career");
+        var leaders = await scraper.GetSingleAllTimeLeaderAsync(stat, type);
         return Results.Ok(leaders);
     }
     catch (Exception ex)

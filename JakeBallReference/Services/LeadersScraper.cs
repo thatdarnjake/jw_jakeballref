@@ -97,53 +97,39 @@ public class LeadersScraper
         return result;
     }
 
-    // ---- All-Time Leaders ----
+    // ---- All-Time Leaders (single query) ----
 
-    private static readonly Dictionary<string, string> AllTimeCategories = new()
+    private static readonly Dictionary<string, string> StatNames = new()
     {
-        ["pts"] = "Points",
-        ["trb"] = "Rebounds",
-        ["ast"] = "Assists",
-        ["stl"] = "Steals",
-        ["blk"] = "Blocks",
-        ["fg"] = "Field Goals",
-        ["fg3"] = "3-Pointers",
-        ["ft"] = "Free Throws",
-        ["g"] = "Games Played",
-        ["mp"] = "Minutes Played"
+        ["pts"] = "Points", ["trb"] = "Rebounds", ["ast"] = "Assists",
+        ["stl"] = "Steals", ["blk"] = "Blocks", ["fg"] = "Field Goals",
+        ["fg3"] = "3-Pointers", ["ft"] = "Free Throws",
+        ["g"] = "Games Played", ["mp"] = "Minutes Played"
     };
 
-    public async Task<object> GetAllTimeLeadersAsync(string type = "career")
+    public async Task<object> GetSingleAllTimeLeaderAsync(string stat, string type)
     {
-        // type: "career" for regular season, "career_p" for playoffs
-        var suffix = type == "playoffs" ? "_career_p" : "_career";
-        var cacheKey = $"alltime:{suffix}";
+        var cacheKey = $"alltime:{stat}_{type}";
         if (_cache.TryGetValue(cacheKey, out object? cached) && cached != null)
             return cached;
 
-        var categories = new List<object>();
+        // type maps to URL suffix: career, season, career_p, active
+        var url = $"https://www.basketball-reference.com/leaders/{stat}_{type}.html";
+        var doc = await FetchPageAsync(url);
+        var entries = ParseAllTimeTable(doc);
 
-        foreach (var kv in AllTimeCategories)
+        var title = StatNames.GetValueOrDefault(stat, stat);
+        var typeLabel = type switch
         {
-            try
-            {
-                var url = $"https://www.basketball-reference.com/leaders/{kv.Key}{suffix}.html";
-                var doc = await FetchPageAsync(url);
-                var entries = ParseAllTimeTable(doc);
-                if (entries.Count > 0)
-                {
-                    categories.Add(new { title = kv.Value, stat = kv.Key, entries });
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("Failed to fetch all-time {Stat}: {Error}", kv.Key, ex.Message);
-            }
-        }
+            "career" => "Career (Reg Season)",
+            "season" => "Single Season",
+            "career_p" => "Career (Playoffs)",
+            "active" => "Active Players",
+            _ => type
+        };
 
-        var label = type == "playoffs" ? "All-Time Playoffs" : "All-Time Regular Season";
-        var result = new { label, categories };
-        _cache.Set(cacheKey, (object)result, TimeSpan.FromHours(6)); // longer cache for all-time
+        var result = new { title, typeLabel, stat, type, entries };
+        _cache.Set(cacheKey, (object)result, TimeSpan.FromHours(6));
         return result;
     }
 
