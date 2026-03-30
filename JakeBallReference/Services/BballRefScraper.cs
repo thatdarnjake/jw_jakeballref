@@ -188,12 +188,14 @@ public class BballRefScraper
         // Accolades from the leaderboard/bling section
         profile.Accolades = ExtractAccolades(doc);
 
-        // Seasons list from per_game table
+        // Seasons list from per_game_stats table
         profile.Seasons = ExtractSeasons(doc);
 
-        // Stat tables
-        profile.PerGameStats = ExtractStatTable(doc, "per_game");
-        profile.TotalStats = ExtractStatTable(doc, "totals");
+        // Stat tables - basketball-reference uses per_game_stats/totals_stats (not per_game/totals)
+        // bball-ref table IDs: per_game, totals, advanced
+        // (some older pages used per_game_stats / totals_stats, so try both)
+        profile.PerGameStats = ExtractStatTable(doc, "per_game") ?? ExtractStatTable(doc, "per_game_stats");
+        profile.TotalStats = ExtractStatTable(doc, "totals") ?? ExtractStatTable(doc, "totals_stats");
         profile.AdvancedStats = ExtractStatTable(doc, "advanced");
 
         _cache.Set(cacheKey, profile, CacheDuration);
@@ -244,7 +246,7 @@ public class BballRefScraper
     private List<string> ExtractSeasons(HtmlDocument doc)
     {
         var seasons = new List<string>();
-        var rows = doc.DocumentNode.SelectNodes("//table[@id='per_game']/tbody/tr[not(contains(@class,'thead'))]");
+        var rows = doc.DocumentNode.SelectNodes("//table[@id='per_game_stats']/tbody/tr[not(contains(@class,'thead'))]");
         if (rows != null)
         {
             foreach (var row in rows)
