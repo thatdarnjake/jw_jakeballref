@@ -346,8 +346,21 @@
         if (e.key === 'Escape') closeSearch();
     });
 
-    // Init
-    render();
+    // Init - default load Embiid
+    async function loadDefaultPlayer() {
+        try {
+            const res = await fetch('/api/players/embiijo01');
+            if (res.ok) {
+                const profile = await res.json();
+                state.players.push({ id: 'embiijo01', profile, filteredStats: null });
+                applyCurrentFilter();
+                render();
+            }
+        } catch (e) {
+            console.warn('Could not load default player:', e);
+        }
+    }
+    loadDefaultPlayer();
 
     // ---- Page Tabs (Players / Standings) ----
     let standingsLoaded = false;
@@ -369,6 +382,10 @@
                 loadStandings();
                 loadPlayoffs();
                 standingsLoaded = true;
+            }
+            if (tab.dataset.page === 'teams' && !teamsLoaded) {
+                loadTeamList();
+                teamsLoaded = true;
             }
         });
     });
@@ -455,6 +472,84 @@
             container.innerHTML = '<p class="loading-msg">Playoff data not available.</p>';
         }
     }
+
+    // ---- Teams Tab ----
+    let teamsLoaded = false;
+    let currentTeamData = null;
+    let activeTeamTable = 'roster';
+
+    async function loadTeamList() {
+        try {
+            const res = await fetch('/api/teams');
+            const teams = await res.json();
+            const list = document.getElementById('teamList');
+            list.innerHTML = '';
+            teams.forEach(t => {
+                const el = document.createElement('div');
+                el.className = 'team-list-item' + (t.code === 'PHI' ? ' active' : '');
+                el.innerHTML = `<span class="team-code">${t.code}</span>${t.name}`;
+                el.addEventListener('click', () => {
+                    document.querySelectorAll('.team-list-item').forEach(i => i.classList.remove('active'));
+                    el.classList.add('active');
+                    loadTeamProfile(t.code);
+                });
+                list.appendChild(el);
+            });
+            // Load default team
+            loadTeamProfile('PHI');
+        } catch (e) {
+            document.getElementById('teamList').innerHTML = '<p class="loading-msg">Failed to load teams.</p>';
+        }
+    }
+
+    async function loadTeamProfile(code) {
+        const container = document.getElementById('teamTableContainer');
+        container.innerHTML = '<p class="team-loading">Loading...</p>';
+        try {
+            const res = await fetch(`/api/teams/${code}`);
+            currentTeamData = await res.json();
+            document.getElementById('teamName').textContent = currentTeamData.teamName;
+            document.getElementById('teamRecord').textContent = currentTeamData.record || '';
+            document.getElementById('teamSeason').textContent = currentTeamData.season || '';
+            renderTeamTable();
+        } catch (e) {
+            container.innerHTML = '<p class="loading-msg">Failed to load team data.</p>';
+        }
+    }
+
+    function renderTeamTable() {
+        if (!currentTeamData) return;
+        const container = document.getElementById('teamTableContainer');
+        let tableData;
+        if (activeTeamTable === 'roster') tableData = currentTeamData.roster;
+        else if (activeTeamTable === 'perGame') tableData = currentTeamData.perGame;
+        else if (activeTeamTable === 'totals') tableData = currentTeamData.totals;
+
+        if (!tableData || !tableData.headers || tableData.rows.length === 0) {
+            container.innerHTML = '<p class="loading-msg">No data available for this view.</p>';
+            return;
+        }
+
+        let html = '<table class="team-table"><thead><tr>';
+        tableData.headers.forEach(h => { html += `<th>${h}</th>`; });
+        html += '</tr></thead><tbody>';
+        tableData.rows.forEach(row => {
+            html += '<tr>';
+            tableData.headers.forEach(h => { html += `<td>${row[h] || ''}</td>`; });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    document.querySelectorAll('.team-stat-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.team-stat-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            activeTeamTable = tab.dataset.teamTable;
+            renderTeamTable();
+        });
+    });
 
     function renderPlayoffRounds(series) {
         const rounds = {};

@@ -41,6 +41,7 @@
             </div>
             <div class="page-tabs">
                 <button class="page-tab active" data-page="players">Players</button>
+                <button class="page-tab" data-page="teams">Teams</button>
                 <button class="page-tab" data-page="standings">Standings / Playoffs</button>
             </div>
         </div>
@@ -59,6 +60,35 @@
                 </svg>
                 Add Player
             </button>
+        </div>
+
+        <!-- Teams page -->
+        <div id="teamsPage" class="page">
+            <div class="teams-container">
+                <div class="teams-layout">
+                    <div class="teams-sidebar">
+                        <h3>NBA Teams</h3>
+                        <div class="team-list" id="teamList">
+                            <p class="loading-msg">Loading teams...</p>
+                        </div>
+                    </div>
+                    <div class="teams-main">
+                        <div class="team-header" id="teamHeader">
+                            <h2 id="teamName">Select a team</h2>
+                            <span class="team-record" id="teamRecord"></span>
+                            <span class="team-season" id="teamSeason"></span>
+                        </div>
+                        <div class="team-stat-tabs">
+                            <button class="team-stat-tab active" data-team-table="roster">Roster</button>
+                            <button class="team-stat-tab" data-team-table="perGame">Per Game</button>
+                            <button class="team-stat-tab" data-team-table="totals">Totals</button>
+                        </div>
+                        <div class="team-table-wrap" id="teamTableContainer">
+                            <p class="loading-msg">Select a team to view details.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Standings page -->

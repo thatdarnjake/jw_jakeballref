@@ -20,6 +20,15 @@ builder.Services.AddHttpClient<StandingsScraper>(client =>
     client.Timeout = TimeSpan.FromSeconds(15);
 });
 
+builder.Services.AddHttpClient<TeamScraper>(client =>
+{
+    client.DefaultRequestHeaders.Add("User-Agent",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+    client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+    client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.5");
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+
 var app = builder.Build();
 
 app.UseDefaultFiles();
@@ -87,6 +96,23 @@ app.MapGet("/api/playoffs", async (StandingsScraper scraper) =>
     catch (Exception ex)
     {
         return Results.Problem($"Failed to load playoffs: {ex.Message}");
+    }
+});
+
+// Teams
+app.MapGet("/api/teams", (TeamScraper scraper) => Results.Ok(scraper.GetTeamList()));
+
+app.MapGet("/api/teams/{teamCode}", async (string teamCode, int? season, TeamScraper scraper) =>
+{
+    try
+    {
+        var profile = await scraper.GetTeamProfileAsync(teamCode, season);
+        if (profile == null) return Results.NotFound();
+        return Results.Ok(profile);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to load team: {ex.Message}");
     }
 });
 
