@@ -97,6 +97,98 @@ public class LeadersScraper
         return result;
     }
 
+    // ---- All-Time Leaders ----
+
+    private static readonly Dictionary<string, string> AllTimeCategories = new()
+    {
+        ["pts"] = "Points",
+        ["trb"] = "Rebounds",
+        ["ast"] = "Assists",
+        ["stl"] = "Steals",
+        ["blk"] = "Blocks",
+        ["fg"] = "Field Goals",
+        ["fg3"] = "3-Pointers",
+        ["ft"] = "Free Throws",
+        ["g"] = "Games Played",
+        ["mp"] = "Minutes Played"
+    };
+
+    public async Task<object> GetAllTimeLeadersAsync(string type = "career")
+    {
+        // type: "career" for regular season, "career_p" for playoffs
+        var suffix = type == "playoffs" ? "_career_p" : "_career";
+        var cacheKey = $"alltime:{suffix}";
+        if (_cache.TryGetValue(cacheKey, out object? cached) && cached != null)
+            return cached;
+
+        var categories = new List<object>();
+
+        foreach (var kv in AllTimeCategories)
+        {
+            try
+            {
+                var url = $"https://www.basketball-reference.com/leaders/{kv.Key}{suffix}.html";
+                var doc = await FetchPageAsync(url);
+                var entries = ParseAllTimeTable(doc);
+                if (entries.Count > 0)
+                {
+                    categories.Add(new { title = kv.Value, stat = kv.Key, entries });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Failed to fetch all-time {Stat}: {Error}", kv.Key, ex.Message);
+            }
+        }
+
+        var label = type == "playoffs" ? "All-Time Playoffs" : "All-Time Regular Season";
+        var result = new { label, categories };
+        _cache.Set(cacheKey, (object)result, TimeSpan.FromHours(6)); // longer cache for all-time
+        return result;
+    }
+
+    private List<object> ParseAllTimeTable(HtmlDocument doc)
+    {
+        var entries = new List<object>();
+
+        // Rows are inside div#div_nba as tr elements with player links
+        var rows = doc.DocumentNode.SelectNodes("//div[@id='div_nba']//tr[.//a[contains(@href,'/players/')]]");
+        if (rows == null) return entries;
+
+        foreach (var row in rows.Take(25))
+        {
+            var cells = row.SelectNodes(".//td|.//th");
+            if (cells == null || cells.Count < 2) continue;
+
+            // First cell: rank (may include ".")
+            var rankText = cells[0].InnerText.Trim().TrimEnd('.');
+            int.TryParse(rankText, out var rank);
+
+            // Player link
+            var link = row.SelectSingleNode(".//a[contains(@href,'/players/')]");
+            var playerName = WebUtility.HtmlDecode(link?.InnerText?.Trim() ?? "");
+            var href = link?.GetAttributeValue("href", "") ?? "";
+            var idMatch = Regex.Match(href, @"/players/\w/(\w+)\.html");
+
+            // Stat value: last cell
+            var value = WebUtility.HtmlDecode(cells[cells.Count - 1].InnerText.Trim());
+
+            if (!string.IsNullOrEmpty(playerName))
+            {
+                entries.Add(new
+                {
+                    rank = rank > 0 ? rank : entries.Count + 1,
+                    player = playerName.TrimEnd('*'), // remove HOF marker
+                    hof = playerName.EndsWith("*"),
+                    playerId = idMatch.Success ? idMatch.Groups[1].Value : "",
+                    value
+                });
+            }
+        }
+
+        return entries;
+    }
+
     private object? ParseLeaderDiv(HtmlDocument doc, string divId)
     {
         var div = doc.DocumentNode.SelectSingleNode($"//div[@id='{divId}']");

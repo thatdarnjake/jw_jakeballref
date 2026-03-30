@@ -122,6 +122,20 @@ app.MapGet("/api/leaders", async (int? season, LeadersScraper scraper) =>
     }
 });
 
+// All-time leaders
+app.MapGet("/api/leaders/alltime", async (string? type, LeadersScraper scraper) =>
+{
+    try
+    {
+        var leaders = await scraper.GetAllTimeLeadersAsync(type ?? "career");
+        return Results.Ok(leaders);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to load all-time leaders: {ex.Message}");
+    }
+});
+
 // Teams
 app.MapGet("/api/teams", (TeamScraper scraper) => Results.Ok(scraper.GetTeamList()));
 

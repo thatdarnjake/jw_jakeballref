@@ -581,6 +581,8 @@
 
     // ---- Leaders ----
     var leadersData = null;
+    var alltimeRegData = null;
+    var alltimePlayoffsData = null;
     var leadersView = 'perGame';
 
     async function loadLeaders() {
@@ -594,24 +596,44 @@
         }
     }
 
+    async function loadAllTimeLeaders(type) {
+        var grid = document.getElementById('leadersGrid');
+        grid.innerHTML = '<p class="loading-msg">Loading all-time leaders (this may take a moment)...</p>';
+        try {
+            var res = await fetch('/api/leaders/alltime?type=' + type);
+            var data = await res.json();
+            if (type === 'playoffs') alltimePlayoffsData = data;
+            else alltimeRegData = data;
+            renderLeaders();
+        } catch (e) {
+            grid.innerHTML = '<p class="loading-msg">Failed to load all-time leaders.</p>';
+        }
+    }
+
     function renderLeaders() {
         var grid = document.getElementById('leadersGrid');
-        if (!leadersData) return;
+        var cats = null;
 
-        var cats = leadersView === 'perGame' ? leadersData.perGame : leadersData.totals;
+        if (leadersView === 'perGame' && leadersData) cats = leadersData.perGame;
+        else if (leadersView === 'totals' && leadersData) cats = leadersData.totals;
+        else if (leadersView === 'alltimeReg' && alltimeRegData) cats = alltimeRegData.categories;
+        else if (leadersView === 'alltimePlayoffs' && alltimePlayoffsData) cats = alltimePlayoffsData.categories;
+
         if (!cats || cats.length === 0) {
             grid.innerHTML = '<p class="loading-msg">No leader data available.</p>';
             return;
         }
 
+        var isAllTime = leadersView.startsWith('alltime');
         var html = '';
         cats.forEach(function (cat) {
             html += '<div class="leader-card"><h3>' + cat.title + '</h3>';
             cat.entries.forEach(function (e) {
+                var nameDisplay = e.player + (e.hof ? ' <span class="hof-badge">HOF</span>' : '');
                 html += '<div class="leader-entry">' +
                     '<span class="leader-rank">' + e.rank + '</span>' +
-                    '<span class="leader-name">' + e.player + '</span>' +
-                    '<span class="leader-team">' + (e.team || '') + '</span>' +
+                    '<span class="leader-name">' + nameDisplay + '</span>' +
+                    (e.team ? '<span class="leader-team">' + e.team + '</span>' : '') +
                     '<span class="leader-value">' + e.value + '</span>' +
                     '</div>';
             });
@@ -626,7 +648,14 @@
             document.querySelectorAll('.leaders-tab').forEach(function (t) { t.classList.remove('active'); });
             tab.classList.add('active');
             leadersView = tab.dataset.leadersView;
-            renderLeaders();
+
+            if (leadersView === 'alltimeReg' && !alltimeRegData) {
+                loadAllTimeLeaders('career');
+            } else if (leadersView === 'alltimePlayoffs' && !alltimePlayoffsData) {
+                loadAllTimeLeaders('playoffs');
+            } else {
+                renderLeaders();
+            }
         });
     });
 
