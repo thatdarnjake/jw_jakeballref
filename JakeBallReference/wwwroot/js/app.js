@@ -362,8 +362,9 @@
     }
     loadDefaultPlayer();
 
-    // ---- Page Tabs (Players / Standings) ----
+    // ---- Page Tabs ----
     let standingsLoaded = false;
+    let teamsLoaded = false;
     const $headerControls = document.getElementById('headerControls');
 
     document.querySelectorAll('.page-tab').forEach(tab => {
@@ -474,7 +475,6 @@
     }
 
     // ---- Teams Tab ----
-    let teamsLoaded = false;
     let currentTeamData = null;
     let activeTeamTable = 'roster';
 
