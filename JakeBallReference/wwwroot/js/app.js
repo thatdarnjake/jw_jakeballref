@@ -364,7 +364,7 @@
 
     // ---- Page Tabs (Players / Standings) ----
     let standingsLoaded = false;
-    const $headerControls = document.querySelector('.header-controls');
+    const $headerControls = document.getElementById('headerControls');
 
     document.querySelectorAll('.page-tab').forEach(tab => {
         tab.addEventListener('click', () => {

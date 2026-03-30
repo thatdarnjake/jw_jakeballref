@@ -12,11 +12,19 @@
 <body>
     <header>
         <div class="header-content">
-            <div class="logo">
-                <h1>Jake-Ball Reference</h1>
-                <span class="tagline">a basketball dot com scraper</span>
+            <div class="header-top">
+                <div class="logo">
+                    <h1>Jake-Ball Reference</h1>
+                    <span class="tagline">a basketball dot com scraper</span>
+                </div>
+                <nav class="page-tabs">
+                    <button class="page-tab active" data-page="players">Players</button>
+                    <button class="page-tab" data-page="teams">Teams</button>
+                    <button class="page-tab" data-page="standings">Standings</button>
+                    <button class="page-tab" data-page="trending">Trending</button>
+                </nav>
             </div>
-            <div class="header-controls">
+            <div class="header-controls" id="headerControls">
                 <div class="filter-group">
                     <label>Compare Mode</label>
                     <select id="compareMode">
@@ -38,12 +46,6 @@
                     <button class="stat-tab" data-table="totals">Totals</button>
                     <button class="stat-tab" data-table="advanced">Advanced</button>
                 </div>
-            </div>
-            <div class="page-tabs">
-                <button class="page-tab active" data-page="players">Players</button>
-                <button class="page-tab" data-page="teams">Teams</button>
-                <button class="page-tab" data-page="standings">Standings / Playoffs</button>
-                <button class="page-tab" data-page="trending">Trending</button>
             </div>
         </div>
     </header>
