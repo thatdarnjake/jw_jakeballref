@@ -141,33 +141,13 @@ public class StandingsScraper
             }
         }
 
-        // If scraping fails (JS-rendered), return a static summary
+        // If scraping fails or playoffs haven't started
         if (matchups.Count == 0)
         {
             var result = new
             {
-                champion = "Oklahoma City Thunder",
-                finals = new { team1 = "Oklahoma City Thunder", team2 = "Indiana Pacers", score = "4-3" },
-                west = new[]
-                {
-                    new { round = "Conference Finals", team1 = "OKC Thunder", team2 = "Denver Nuggets", score = "4-1" },
-                    new { round = "Semifinals", team1 = "OKC Thunder", team2 = "LA Lakers", score = "4-1" },
-                    new { round = "Semifinals", team1 = "Denver Nuggets", team2 = "Houston Rockets", score = "4-3" },
-                    new { round = "First Round", team1 = "(1) OKC Thunder", team2 = "(8) Minnesota", score = "4-1" },
-                    new { round = "First Round", team1 = "(4) Denver", team2 = "(5) Golden State", score = "4-3" },
-                    new { round = "First Round", team1 = "(3) LA Lakers", team2 = "(6) Dallas", score = "4-2" },
-                    new { round = "First Round", team1 = "(2) Houston", team2 = "(7) San Antonio", score = "4-2" }
-                },
-                east = new[]
-                {
-                    new { round = "Conference Finals", team1 = "Indiana Pacers", team2 = "New York Knicks", score = "4-2" },
-                    new { round = "Semifinals", team1 = "New York Knicks", team2 = "Boston Celtics", score = "4-1" },
-                    new { round = "Semifinals", team1 = "Indiana Pacers", team2 = "Cleveland Cavaliers", score = "4-1" },
-                    new { round = "First Round", team1 = "(1) Cleveland", team2 = "(8) Orlando", score = "4-1" },
-                    new { round = "First Round", team1 = "(4) Indiana", team2 = "(5) Detroit", score = "4-3" },
-                    new { round = "First Round", team1 = "(3) New York", team2 = "(6) Atlanta", score = "4-0" },
-                    new { round = "First Round", team1 = "(2) Boston", team2 = "(7) Philadelphia", score = "4-1" }
-                }
+                status = "Playoffs have not yet started for the 2025-26 season.",
+                champion = (string?)null
             };
             _cache.Set(cacheKey, (object)result, CacheDuration);
             return result;

@@ -346,8 +346,11 @@
         if (e.key === 'Escape') closeSearch();
     });
 
-    // Init - default load Embiid
-    async function loadDefaultPlayer() {
+    // Init
+    render();
+
+    // Default load Embiid
+    (async function() {
         try {
             const res = await fetch('/api/players/embiijo01');
             if (res.ok) {
@@ -359,8 +362,7 @@
         } catch (e) {
             console.warn('Could not load default player:', e);
         }
-    }
-    loadDefaultPlayer();
+    })();
 
 })();
 
@@ -456,7 +458,8 @@
     function renderPlayoffs(data) {
         var container = document.getElementById('playoffsContainer');
         if (!data || !data.champion) {
-            container.innerHTML = '<p class="loading-msg">Playoff data not available.</p>';
+            var msg = (data && data.status) ? data.status : 'Playoff data not available.';
+            container.innerHTML = '<p class="loading-msg">' + msg + '</p>';
             return;
         }
         var html = '<div class="playoff-finals"><h3>NBA Finals</h3>' +

@@ -88,7 +88,7 @@ public class TeamScraper
 
     public async Task<object?> GetTeamProfileAsync(string teamCode, int? season = null)
     {
-        var year = season ?? 2025;
+        var year = season ?? 2026;
         var cacheKey = $"team:{teamCode}:{year}";
         if (_cache.TryGetValue(cacheKey, out object? cached) && cached != null)
             return cached;
