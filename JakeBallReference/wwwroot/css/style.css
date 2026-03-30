@@ -926,6 +926,13 @@ main {
     color: var(--text-muted);
 }
 
+/* Trending page */
+.trending-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .header-content {

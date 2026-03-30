@@ -43,6 +43,7 @@
                 <button class="page-tab active" data-page="players">Players</button>
                 <button class="page-tab" data-page="teams">Teams</button>
                 <button class="page-tab" data-page="standings">Standings / Playoffs</button>
+                <button class="page-tab" data-page="trending">Trending</button>
             </div>
         </div>
     </header>
@@ -116,6 +117,14 @@
                 </div>
             </div>
         </div>
+
+        <!-- Trending page -->
+        <div id="trendingPage" class="page">
+            <div class="trending-container">
+                <h2 class="standings-title">r/nba - Trending</h2>
+                <div class='sk-ww-subreddit' data-embed-id='25668071'></div>
+            </div>
+        </div>
     </main>
 
     <div id="searchModal" class="modal" style="display:none;">
@@ -128,6 +137,7 @@
         </div>
     </div>
 
+    <script src='https://widgets.sociablekit.com/subreddit/widget.js' defer></script>
     <script src="/js/app.js"></script>
 </body>
 </html>
